@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="my">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>K&Y Fashion — Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Myanmar",sans-serif;background:#f5f5f5;color:#111}.wrap{max-width:1100px;margin:auto;padding:16px}.top{background:#111;color:#fff;padding:16px;border-radius:14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:10px}.top h1{font-size:20px;margin:0}.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.primary{background:#111;color:#fff}.danger{background:#d92d20;color:#fff}.light{background:#eee}.tabs{display:flex;gap:8px;overflow:auto;margin-bottom:14px}.tab{white-space:nowrap}.tab.active{background:#111;color:#fff}.panel{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 2px 10px #0000000d}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.full{grid-column:1/-1}label{font-size:13px;font-weight:700;display:block;margin:4px 0}input,textarea,select{width:100%;padding:11px;border:1px solid #ddd;border-radius:9px;font-size:15px}textarea{min-height:90px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.actions{display:flex;gap:7px;flex-wrap:wrap}.msg{padding:10px;border-radius:9px;margin-bottom:10px;display:none}.ok{display:block;background:#e9f8ee;color:#16733a}.err{display:block;background:#fff0f0;color:#b42318}.item{border:1px solid #eee;border-radius:12px;padding:12px;margin:8px 0}.item h3{margin:0 0 6px;font-size:16px}.muted{color:#666;font-size:13px}.hide{display:none}.status{font-weight:700}.thumb{width:60px;height:60px;object-fit:cover;border-radius:8px;background:#eee}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:760px}th,td{text-align:left;padding:9px;border-bottom:1px solid #eee;vertical-align:top}th{font-size:13px;background:#fafafa}.login{max-width:420px;margin:60px auto}.login h1{margin-top:0}@media(max-width:650px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.top{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div id="loginView" class="wrap login">
+  <div class="panel">
+    <h1>K&Y Fashion Admin</h1>
+    <p class="muted">Admin account နဲ့ဝင်ပါ</p>
+    <div id="loginMsg" class="msg"></div>
+    <label>Email</label><input id="email" type="email" value="htangyin7@gmail.com">
+    <label>Password</label><input id="password" type="password">
+    <button class="btn primary" style="width:100%;margin-top:12px" onclick="login()">Login</button>
+  </div>
+</div>
+
+<div id="app" class="wrap hide">
+  <div class="top"><h1>🛍️ K&Y Fashion — Admin Panel</h1><button class="btn light" onclick="logout()">Logout</button></div>
+  <div id="msg" class="msg"></div>
+  <div class="tabs">
+    <button class="btn tab active" id="tabProducts" onclick="showTab('products')">Products</button>
+    <button class="btn tab" id="tabOrders" onclick="showTab('orders')">Orders</button>
+    <button class="btn tab" id="tabCategories" onclick="showTab('categories')">Categories</button>
+  </div>
+
+  <section id="productsTab">
+    <div class="panel">
+      <div class="row" style="justify-content:space-between"><h2 id="formTitle">➕ အထည်ထည့်ရန်</h2><button class="btn light" onclick="resetProductForm()">အသစ်</button></div>
+      <input type="hidden" id="productId">
+      <div class="grid">
+        <div><label>အထည်အမည်</label><input id="name" placeholder="ဥပမာ Box Tee"></div>
+        <div><label>Category</label><select id="category"></select></div>
+        <div><label>ရောင်းစျေး</label><input id="price" type="number" min="0"></div>
+        <div><label>အရင်စျေး</label><input id="oldPrice" type="number" min="0"></div>
+        <div><label>Stock</label><input id="stock" type="number" min="0" value="0"></div>
+        <div><label>Sizes</label><input id="sizes" placeholder="S, M, L, XL, 2XL"></div>
+        <div><label>Colors</label><input id="colors" placeholder="Black, White, Pink"></div>
+        <div><label>Image URL</label><input id="image" placeholder="https://..."></div>
+        <div class="full"><label>Description</label><textarea id="description"></textarea></div>
+        <div class="full"><label><input id="active" type="checkbox" checked style="width:auto"> Customer app မှာပြမည်</label></div>
+      </div>
+      <div class="actions" style="margin-top:12px"><button class="btn primary" onclick="saveProduct()">💾 သိမ်းမည်</button><button class="btn light" onclick="resetProductForm()">ဖျက်ပြီးအသစ်</button></div>
+    </div>
+    <div class="panel"><h2>📦 အထည်စာရင်း</h2><div id="productList"></div></div>
+  </section>
+
+  <section id="ordersTab" class="hide">
+    <div class="panel"><div class="row" style="justify-content:space-between"><h2>📦 Orders</h2><button class="btn light" onclick="loadOrders()">Refresh</button></div><div id="ordersList"></div></div>
+  </section>
+
+  <section id="categoriesTab" class="hide">
+    <div class="panel"><h2>🏷️ Categories</h2><div class="row"><input id="newCategory" placeholder="Category name" style="flex:1"><button class="btn primary" onclick="addCategory()">ထည့်မည်</button></div><div id="categoryList" style="margin-top:12px"></div></div>
+  </section>
+</div>
+
+<script>
+const SUPABASE_URL='https://hkasaasrukpexnxvrgoa.supabase.co';
+const SUPABASE_KEY='sb_publishable_WnttsFPBqZTunJrKR9fvwg_wCvtGFcA';
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let categories=[];
+
+function showMsg(text,ok=false,id='msg'){const e=document.getElementById(id);e.textContent=text;e.className='msg '+(ok?'ok':'err');setTimeout(()=>e.className='msg',4000)}
+async function login(){
+ const email=document.getElementById('email').value.trim(),password=document.getElementById('password').value;
+ if(!email||!password)return showMsg('Email နဲ့ Password ထည့်ပါ',false,'loginMsg');
+ showMsg('Login စစ်နေပါတယ်...',true,'loginMsg');
+ const {error}=await db.auth.signInWithPassword({email,password});
+ if(error)return showMsg('Login မအောင်မြင်ပါ: '+error.message,false,'loginMsg');
+ init();
+}
+async function logout(){await db.auth.signOut();location.reload()}
+async function init(){document.getElementById('loginView').classList.add('hide');document.getElementById('app').classList.remove('hide');await loadCategories();await loadProducts();}
+async function loadCategories(){
+ const {data,error}=await db.from('categories').select('*').order('sort_order',{ascending:true});
+ if(error)return showMsg('Categories မဖတ်နိုင်ပါ: '+error.message);
+ categories=data||[];const s=document.getElementById('category');s.innerHTML=categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');renderCategories();
+}
+async function loadProducts(){
+ const {data,error}=await db.from('products').select('*').order('created_at',{ascending:false});
+ if(error)return showMsg('Products မဖတ်နိုင်ပါ: '+error.message);
+ document.getElementById('productList').innerHTML=(data||[]).map(p=>{
+  const img=Array.isArray(p.images)&&p.images[0]?p.images[0]:'';const cat=categories.find(c=>c.id===p.category_id)?.name||p.category||'';
+  return `<div class="item"><div class="row"><img class="thumb" src="${esc(img)}" onerror="this.style.display='none'"><div style="flex:1"><h3>${esc(p.name)}</h3><div class="muted">${esc(cat)} · ${Number(p.price).toLocaleString()} MMK · Stock ${p.stock} · ${p.active?'ပြနေသည်':'ဖျောက်ထားသည်'}</div><div class="muted">Size: ${esc((p.sizes||[]).join(', '))} · Color: ${esc((p.colors||[]).join(', '))}</div></div></div><div class="actions" style="margin-top:8px"><button class="btn light" onclick='editProduct(${JSON.stringify(p)})'>✏️ Edit</button><button class="btn danger" onclick="deleteProduct('${p.id}')">🗑️ Delete</button></div></div>`
+ }).join('')||'<p class="muted">အထည်မရှိသေးပါ။</p>';
+}
+function editProduct(p){document.getElementById('productId').value=p.id;document.getElementById('formTitle').textContent='✏️ အထည်ပြင်ရန်';document.getElementById('name').value=p.name||'';document.getElementById('category').value=p.category_id||'';document.getElementById('price').value=p.price||0;document.getElementById('oldPrice').value=p.old_price||0;document.getElementById('stock').value=p.stock||0;document.getElementById('sizes').value=(p.sizes||[]).join(', ');document.getElementById('colors').value=(p.colors||[]).join(', ');document.getElementById('image').value=(Array.isArray(p.images)?p.images[0]:'')||'';document.getElementById('description').value=p.description||'';document.getElementById('active').checked=p.active!==false;window.scrollTo({top:0,behavior:'smooth'})}
+async function saveProduct(){
+ const id=document.getElementById('productId').value;const name=document.getElementById('name').value.trim();if(!name)return showMsg('အထည်အမည်ထည့်ပါ');
+ const catId=document.getElementById('category').value;const cat=categories.find(c=>c.id===catId);const image=document.getElementById('image').value.trim();
+ const payload={name,category_id:catId||null,category:cat?.name||'',price:Number(document.getElementById('price').value||0),old_price:Number(document.getElementById('oldPrice').value||0),stock:Number(document.getElementById('stock').value||0),sizes:csv('sizes'),colors:csv('colors'),images:image?[image]:[],description:document.getElementById('description').value.trim(),active:document.getElementById('active').checked,updated_at:new Date().toISOString()};
+ const q=id?db.from('products').update(payload).eq('id',id):db.from('products').insert(payload);const {error}=await q;if(error)return showMsg('မသိမ်းနိုင်ပါ: '+error.message);showMsg(id?'ပြင်ပြီးပါပြီ':'အထည်ထည့်ပြီးပါပြီ',true);resetProductForm();await loadProducts();}
+async function deleteProduct(id){if(!confirm('ဒီအထည်ကို ဖျက်မှာသေချာပါသလား?'))return;const {error}=await db.from('products').delete().eq('id',id);if(error)return showMsg('ဖျက်မရပါ: '+error.message);showMsg('ဖျက်ပြီးပါပြီ',true);await loadProducts()}
+function resetProductForm(){document.getElementById('productId').value='';document.getElementById('formTitle').textContent='➕ အထည်ထည့်ရန်';['name','price','oldPrice','stock','sizes','colors','image','description'].forEach(id=>document.getElementById(id).value='');document.getElementById('stock').value=0;document.getElementById('active').checked=true}
+function csv(id){return document.getElementById(id).value.split(',').map(x=>x.trim()).filter(Boolean)}
+function renderCategories(){document.getElementById('categoryList').innerHTML=categories.map(c=>`<div class="item"><div class="row"><span style="flex:1">${esc(c.name)}</span><button class="btn danger" onclick="deleteCategory('${c.id}')">Delete</button></div></div>`).join('')}
+async function addCategory(){const name=document.getElementById('newCategory').value.trim();if(!name)return;const {error}=await db.from('categories').insert({name,sort_order:categories.length+1});if(error)return showMsg('Category ထည့်မရပါ: '+error.message);document.getElementById('newCategory').value='';await loadCategories();}
+async function deleteCategory(id){if(!confirm('Category ဖျက်မှာသေချာပါသလား?'))return;const {error}=await db.from('categories').delete().eq('id',id);if(error)return showMsg('Category ဖျက်မရပါ: '+error.message);await loadCategories();await loadProducts()}
+async function loadOrders(){const box=document.getElementById('ordersList');box.innerHTML='Loading...';const {data,error}=await db.from('orders').select('*').order('created_at',{ascending:false});if(error)return showMsg('Orders မဖတ်နိုင်ပါ: '+error.message);if(!data?.length){box.innerHTML='<p class="muted">Order မရှိသေးပါ။</p>';return}box.innerHTML=data.map(o=>`<div class="item"><h3>Order #${esc(o.id.slice(0,8))}</h3><div class="muted">${esc(o.customer_name)} · ${esc(o.phone)}<br>${esc(o.address)}<br>Payment: ${esc(o.payment_method)} · Total: ${Number(o.total_amount).toLocaleString()} MMK · Delivery: ${Number(o.delivery_fee||0).toLocaleString()} MMK</div><div class="row" style="margin-top:10px"><select onchange="changeStatus('${o.id}',this.value)">${['Pending','Confirmed','Preparing','Shipping','Completed','Cancelled'].map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select>${o.payment_screenshot_url?`<a class="btn light" href="${esc(o.payment_screenshot_url)}" target="_blank">Slip ကြည့်ရန်</a>`:''}</div><div class="muted" style="margin-top:8px">${new Date(o.created_at).toLocaleString()}</div></div>`).join('')}
+async function changeStatus(id,status){const {error}=await db.from('orders').update({status}).eq('id',id);if(error)return showMsg('Status ပြောင်းမရပါ: '+error.message);showMsg('Order status ပြောင်းပြီးပါပြီ',true)}
+function showTab(tab){['products','orders','categories'].forEach(t=>{document.getElementById(t+'Tab').classList.toggle('hide',t!==tab);document.getElementById('tab'+t[0].toUpperCase()+t.slice(1)).classList.toggle('active',t===tab)});if(tab==='orders')loadOrders()}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+db.auth.getSession().then(({data})=>{if(data.session)init()});
+</script>
+</body>
+</html>
