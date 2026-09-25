@@ -1,0 +1,9 @@
+{
+  "name": "K&Y Fashion",
+  "short_name": "K&Y Fashion",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#111111",
+  "orientation": "portrait"
+}
